@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -374,7 +375,7 @@ class SearchField<T> extends StatefulWidget {
 class _SearchFieldState<T> extends State<SearchField<T>> {
   final StreamController<List<SearchFieldListItem<T>?>?> suggestionStream =
       StreamController<List<SearchFieldListItem<T>?>?>.broadcast();
-  // FocusNode? _searchFocus;
+  FocusNode? _searchFocus;
   TextEditingController? searchController;
   ScrollbarDecoration? _scrollbarDecoration;
 
@@ -386,7 +387,7 @@ class _SearchFieldState<T> extends State<SearchField<T>> {
       searchController!.dispose();
     }
     if (widget.focusNode == null) {
-      // _searchFocus!.dispose();
+      _searchFocus!.dispose();
     }
     removeOverlay();
     super.dispose();
@@ -406,30 +407,30 @@ class _SearchFieldState<T> extends State<SearchField<T>> {
       _scrollbarDecoration = widget.scrollbarDecoration;
     }
     if (widget.focusNode != null) {
-      // _searchFocus = widget.focusNode;
+      _searchFocus = widget.focusNode;
     } else {
-      // _searchFocus = FocusNode();
+      _searchFocus = FocusNode();
     }
-    // _searchFocus!.addListener(() {
+    _searchFocus!.addListener(() {
       // When focus shifts to ListView prevent suggestions from rebuilding
       // when user navigates through suggestions using keyboard
-    //   if (_searchFocus!.hasFocus) {
-    //     _overlayEntry ??= _createOverlay();
-    //     if (widget.suggestionState == Suggestion.expand) {
-    //       isSuggestionsShown = true;
-    //       Future.delayed(Duration(milliseconds: 100), () {
-    //         suggestionStream.sink.add(widget.suggestions);
-    //       });
-    //     }
-    //     Overlay.of(context).insert(_overlayEntry!);
-    //   } else {
-    //     removeOverlay();
-    //     if (searchController!.text.isEmpty) {
-    //       selected = null;
-    //     }
-    //     suggestionStream.sink.add(null);
-    //   }
-    // });
+      if (_searchFocus!.hasFocus) {
+        _overlayEntry ??= _createOverlay();
+        if (widget.suggestionState == Suggestion.expand) {
+          isSuggestionsShown = true;
+          Future.delayed(Duration(milliseconds: 100), () {
+            suggestionStream.sink.add(widget.suggestions);
+          });
+        }
+        Overlay.of(context).insert(_overlayEntry!);
+      } else {
+        removeOverlay();
+        if (searchController!.text.isEmpty) {
+          selected = null;
+        }
+        suggestionStream.sink.add(null);
+      }
+    });
   }
 
   /// With SuggestionDirection.flex, the widget will automatically decide the direction of the
@@ -496,7 +497,7 @@ class _SearchFieldState<T> extends State<SearchField<T>> {
     }
     if (selected == null) {
       if (intent.isTabKey) {
-        // _searchFocus!.previousFocus();
+        _searchFocus!.previousFocus();
       }
       return;
     }
@@ -520,7 +521,7 @@ class _SearchFieldState<T> extends State<SearchField<T>> {
     if (selected == null) {
       // focus to next focus node
       if (intent.isTabKey && !isSuggestionsShown) {
-        // _searchFocus!.nextFocus();
+        _searchFocus!.nextFocus();
         return;
       }
       selected = 0;
@@ -539,7 +540,7 @@ class _SearchFieldState<T> extends State<SearchField<T>> {
   // for onSubmitted callback of the textfield
   void handleSelectKeyPress(SelectionIntent<T> intent) {
     if (selected == null) return;
-    // _searchFocus!.unfocus();
+    _searchFocus!.unfocus();
     if (intent.selectedItem != null) {
       onSuggestionTapped(intent.selectedItem!);
     } else {
@@ -548,7 +549,7 @@ class _SearchFieldState<T> extends State<SearchField<T>> {
   }
 
   void handleUnFocusKeyPress(UnFocusIntent intent) {
-    // _searchFocus!.unfocus();
+    _searchFocus!.unfocus();
     selected = null;
     _overlayEntry!.markNeedsBuild();
   }
@@ -605,9 +606,9 @@ class _SearchFieldState<T> extends State<SearchField<T>> {
       // suggestion action to switch focus to next focus node
       if (widget.suggestionAction != null) {
         if (widget.suggestionAction == SuggestionAction.next) {
-          // _searchFocus!.nextFocus();
+          _searchFocus!.nextFocus();
         } else if (widget.suggestionAction == SuggestionAction.unfocus) {
-          // _searchFocus!.unfocus();
+          _searchFocus!.unfocus();
         }
       }
 
@@ -631,7 +632,7 @@ class _SearchFieldState<T> extends State<SearchField<T>> {
       builder: (BuildContext context,
           AsyncSnapshot<List<SearchFieldListItem<T>?>?> snapshot) {
         bool isEmpty = false;
-        if (snapshot.data == null ) {
+        if (snapshot.data == null || !_searchFocus!.hasFocus) {
           isSuggestionsShown = false;
           return SizedBox();
         } else if (snapshot.data!.isEmpty || widget.showEmpty) {
@@ -690,6 +691,8 @@ class _SearchFieldState<T> extends State<SearchField<T>> {
                   suggestionDirection: _suggestionDirection,
                   onScroll: widget.onScroll,
                   onTapOutside: (x) {
+                    log("here");
+                    log(widget.onTapOutside.toString());
                     if (widget.onTapOutside != null) {
                       widget.onTapOutside!(x);
                     }
@@ -705,9 +708,10 @@ class _SearchFieldState<T> extends State<SearchField<T>> {
         return TextFieldTapRegion(
           onTapOutside: (x) {
             isSuggestionInFocus = false;
-            // if (!_searchFocus!.hasFocus) {
-            //   removeOverlay();
-            // }
+            if (!_searchFocus!.hasFocus) {
+              log("was going to remove overlay");
+              // removeOverlay();
+            }
           },
           onTapInside: (x) {
             isSuggestionInFocus = true;
@@ -862,7 +866,7 @@ class _SearchFieldState<T> extends State<SearchField<T>> {
               buildCounter: widget.buildCounter,
               inputFormatters: widget.inputFormatters,
               controller: searchController,
-              // focusNode: _searchFocus,
+              focusNode: _searchFocus,
               validator: widget.validator,
               style: widget.searchStyle,
               textInputAction: widget.textInputAction,
