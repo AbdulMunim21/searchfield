@@ -691,7 +691,7 @@ class _SearchFieldState<T> extends State<SearchField<T>> {
                   suggestionDirection: _suggestionDirection,
                   onScroll: widget.onScroll,
                   onTapOutside: (x) {
-                    log("here");
+                    log("here");   
                     log(widget.onTapOutside.toString());
                     if (widget.onTapOutside != null) {
                       widget.onTapOutside!(x);
